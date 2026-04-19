@@ -1,0 +1,53 @@
+name: 🚀 Deploy Laravel to InfinityFree via FTP
+
+on:
+  push:
+    branches:
+      - main # Akan berjalan otomatis setiap kali Anda melakukan 'git push origin main'
+
+jobs:
+  web-deploy:
+    name: 🏗️ Build & Deploy Website
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: 🚚 Mengambil source code terbaru
+      uses: actions/checkout@v3
+
+    - name: 🛠️ Setup PHP Ekstensi
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.2'
+        extensions: mbstring, xml, ctype, iconv, intl, pdo_sqlite, dom, filter, gd, iconv, json, pcntl, pdo_mysql
+
+    - name: 📦 Install dependensi PHP (Composer)
+      run: composer install --optimize-autoloader --no-dev --no-progress --no-suggest
+
+    - name: 🛠️ Setup Node.js (Untuk Frontend)
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+
+    - name: 📦 Install dependensi NPM & Build
+      run: |
+        npm install
+        npm run build
+
+    - name: 🗑️ Bersihkan debu-debu (Hapus node_modules agar ringan)
+      run: rm -rf node_modules
+
+    - name: 📂 Kunci file direktori
+      run: php artisan config:clear && php artisan cache:clear && php artisan view:clear
+
+    - name: 🚀 Sync & Upload FTP Secara Otomatis ke InfinityFree
+      uses: SamKirkland/FTP-Deploy-Action@v4.3.4
+      with:
+        server: ${{ secrets.FTP_SERVER }}
+        username: ${{ secrets.FTP_USERNAME }}
+        password: ${{ secrets.FTP_PASSWORD }}
+        server-dir: /htdocs/
+        exclude: |
+          **/.git*
+          **/.git*/**
+          **/node_modules/**
+          .env.example
